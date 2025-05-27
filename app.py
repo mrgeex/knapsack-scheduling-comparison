@@ -12,7 +12,7 @@ import subprocess
 import platform
 
 # Configure these settings:
-INPUT_FOLDER = "./test"
+INPUT_FOLDER = "./before"
 OUTPUT_FOLDER = "./after"
 QUALITY = 50
 
@@ -33,17 +33,28 @@ def update_image_info_with_times(image_info, measured_times):
             updated_info.append((filename, filesize, 0))
     return updated_info
 
-def process_with_scheduler(scheduler_name, image_info, input_folder, output_folder, quality, processing_times=None, time_budget=None):
-    """Process images using the selected scheduling algorithm"""
+def process_with_scheduler(scheduler_name, image_info, input_folder, output_folder, quality, processing_times=None, time_budget=None, compressed_sizes=None):
+    """Process images using the selected scheduling algorithm without recompressing"""
     
     print(f"\nUsing {scheduler_name.upper()} Scheduling Algorithm")
+    
+    # If we have compressed sizes from initialization, we will use them
+    if compressed_sizes is None:
+        compressed_sizes = {}
+        # Assuming we calculate the compressed sizes during initialization
+        for filename, filesize, _ in image_info:
+            output_path = os.path.join(output_folder, filename)
+            if os.path.isfile(output_path):
+                compressed_sizes[filename] = os.path.getsize(output_path) / 1024  # Convert to KB
+    
+    total_time = 0
+    total_space_saved = 0
+    ordered_filenames = []
     
     if scheduler_name == "fcfs":
         if time_budget is not None:
             items = [(i, info[0], info[2]) for i, info in enumerate(image_info)]
             selected = []
-            total_time = 0
-            total_filesize = 0
             
             for i, filename, proc_time in items:
                 if total_time + proc_time <= time_budget:
@@ -51,19 +62,20 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
                     total_time += proc_time
                     for fname, fsize, _ in image_info:
                         if fname == filename:
-                            total_filesize += fsize
+                            compressed_size = compressed_sizes.get(fname, 0)
+                            total_space_saved += fsize - compressed_size
                             break
             
             ordered_filenames = [item[1] for item in selected]
             
             print(f"\nScheduling order ({len(ordered_filenames)} of {len(image_info)} image(s)):")
             print(f"Time Budget: {time_budget:.2f}s, Used: {total_time:.2f}s")
-            print(f"Total compressed size: {total_filesize:.2f}KB")
+            print(f"Total space saved: {total_space_saved:.2f}KB")
             for i, filename in enumerate(ordered_filenames):
                 print(f"{i+1}. {filename}")
         else:
             ordered_filenames = fcfs.schedule(image_info)
-            total_filesize = sum(info[1] for info in image_info)
+            total_space_saved = sum(info[1] - compressed_sizes.get(info[0], 0) for info in image_info)
   
     elif scheduler_name == "greedy":
         if time_budget is not None:
@@ -72,7 +84,7 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
         else:
             print("Shortest Processing Time First")
             ordered_filenames = greedy.schedule(image_info)
-            total_filesize = sum(info[1] for info in image_info)
+            total_space_saved = sum(info[1] - compressed_sizes.get(info[0], 0) for info in image_info)
   
     elif scheduler_name == "dp":
         if time_budget is not None:
@@ -81,33 +93,18 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
         else:
             print("Highest Ratio First (Smith's Rule)")
             ordered_filenames = dp.schedule(image_info)
-            total_filesize = sum(info[1] for info in image_info)
+            total_space_saved = sum(info[1] - compressed_sizes.get(info[0], 0) for info in image_info)
     else:
         print(f"Error: Unknown scheduling algorithm {{{scheduler_name}}}")
         return 0, {}
 
-    processed, skipped, processing_time, measured_times = compressor.compress_images(
-        input_folder,
-        output_folder,
-        quality,
-        ordered_filenames,
-        processing_times
-    )
-
-    if time_budget is not None and scheduler_name != "fcfs":
-        total_filesize = 0
-        for filename in ordered_filenames:
-            for fname, fsize, _ in image_info:
-                if fname == filename:
-                    total_filesize += fsize
-                    break
-
     print("\nScheduling Completed.")
-    print(f"Successful compression: {processed}")
-    print(f"Total Processing Time: {processing_time:.2f} seconds")
-    print(f"Total Compressed Size: {total_filesize:.2f} KB")
+    print(f"Scheduling for {scheduler_name} completed with:")
+    print(f"Total Processing Time: {total_time:.2f} seconds")
+    print(f"Total space saved: {total_space_saved:.2f} KB")
 
-    return processing_time, measured_times
+    return total_time, compressed_sizes
+
 
 def get_time_budget():
     """Prompt the user to set a time budget for scheduling"""
@@ -130,29 +127,28 @@ def run_initialization(input_folder, output_folder, quality):
     
     if not image_info:
         print("Error: No valid images found in the folder!")
-        return None, None, 0, 0
+        return None, None, 0, 0, 0, {}
     
-    # Modify the compressor to only show minimal output during initialization
     start_time = time.time()
     processed, skipped, _, measured_times = compressor.compress_images(
         input_folder, output_folder, quality
     )
     total_time = time.time() - start_time
     
-    # Calculate sizes
     total_original_size = sum(info[1] for info in image_info)
     
-    # Get compressed sizes
     total_compressed_size = 0
+    compressed_sizes = {}
     for file_name in os.listdir(output_folder):
         output_path = os.path.join(output_folder, file_name)
         if os.path.isfile(output_path):
             total_compressed_size += os.path.getsize(output_path) / 1024
+            compressed_sizes[file_name] = os.path.getsize(output_path) / 1024  # Store the compressed size
     
-    # Update image info with measured times
     updated_image_info = update_image_info_with_times(image_info, measured_times)
     
-    return updated_image_info, measured_times, total_original_size, total_compressed_size, total_time, processed
+    return updated_image_info, measured_times, total_original_size, total_compressed_size, total_time, compressed_sizes
+
 
 def display_menu(image_count, total_original_size, total_compressed_size, total_time, time_budget=None):
     """Display the main menu with basic info"""
