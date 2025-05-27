@@ -33,31 +33,14 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
     
     # Determine the ordered filenames based on the scheduling algorithm
     if scheduler_name == "fcfs":
-        if time_budget is not None:
-            items = [(i, info[0], info[4]) for i, info in enumerate(image_info)]
-            selected = []
-            total_time = 0
-            total_space_saved = 0
-            
-            for i, filename, proc_time in items:
-                if total_time + proc_time <= time_budget:
-                    selected.append((i, filename))
-                    total_time += proc_time
-                    for fname, _, _, space_saved, _ in image_info:
-                        if fname == filename:
-                            total_space_saved += space_saved
-                            break
-            
-            ordered_filenames = [item[1] for item in selected]
-            
-            print(f"\nScheduling order ({len(ordered_filenames)} of {len(image_info)} image(s)):")
-            print(f"Time Budget: {time_budget:.2f}s, Used: {total_time:.2f}s")
-            print(f"Total space saved: {total_space_saved:.2f}KB")
-            for i, filename in enumerate(ordered_filenames):
-                print(f"{i+1}. {filename}")
-        else:
-            ordered_filenames = fcfs.schedule(image_info)
-            total_space_saved = sum(info[3] for info in image_info)
+        ordered_filenames = fcfs.schedule(image_info, time_budget)
+        # Calculate total space saved based on ordered filenames
+        total_space_saved = 0
+        for filename in ordered_filenames:
+            for fname, _, _, space_saved, _ in image_info:
+                if fname == filename:
+                    total_space_saved += space_saved
+                    break
   
     elif scheduler_name == "greedy":
         if time_budget is not None:
@@ -66,7 +49,14 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
         else:
             print("Shortest Processing Time First")
             ordered_filenames = greedy.schedule(image_info)
-            total_space_saved = sum(info[3] for info in image_info)
+        
+        # Calculate total space saved based on ordered filenames
+        total_space_saved = 0
+        for filename in ordered_filenames:
+            for fname, _, _, space_saved, _ in image_info:
+                if fname == filename:
+                    total_space_saved += space_saved
+                    break
   
     elif scheduler_name == "dp":
         if time_budget is not None:
@@ -75,7 +65,14 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
         else:
             print("Highest Ratio First (Smith's Rule)")
             ordered_filenames = dp.schedule(image_info)
-            total_space_saved = sum(info[3] for info in image_info)
+        
+        # Calculate total space saved based on ordered filenames
+        total_space_saved = 0
+        for filename in ordered_filenames:
+            for fname, _, _, space_saved, _ in image_info:
+                if fname == filename:
+                    total_space_saved += space_saved
+                    break
     else:
         print(f"Error: Unknown scheduling algorithm {{{scheduler_name}}}")
         return 0, {}
@@ -112,13 +109,7 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
             processing_times
         )
 
-        if time_budget is not None and scheduler_name != "fcfs":
-            total_space_saved = 0
-            for filename in ordered_filenames:
-                for fname, _, _, space_saved, _ in image_info:
-                    if fname == filename:
-                        total_space_saved += space_saved
-                        break
+        # total_space_saved is already calculated for all algorithms above
 
         print("\nScheduling Completed.")
         print(f"Successful compression: {processed}")
@@ -127,6 +118,7 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
 
         return processing_time, measured_times
 
+# Rest of the code remains the same...
 def get_time_budget():
     """Prompt the user to set a time budget for scheduling"""
     while True:

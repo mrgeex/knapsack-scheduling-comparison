@@ -3,7 +3,12 @@ Dynamic Programming scheduler for image compression.
 
 This module implements a dynamic programming algorithm for scheduling image processing.
 The algorithm aims to maximize total value (disk space saved) within a given time budget.
+Uses NumPy's memmap to handle large datasets with minimal memory usage.
 """
+import os
+import tempfile
+import numpy as np
+
 def schedule(image_info, time_budget=None):
   """
   Implements a dynamic programming scheduling algorithm for image compression.
@@ -28,7 +33,7 @@ def schedule(image_info, time_budget=None):
       # Weight is the space saved (more space saved is more important)
       weight = space_saved
       # Processing time is the measured time
-      proc_time = max(proc_time, 0.001)  # Avoid division by zero
+      proc_time = max(proc_time, 0.0000001)  # Avoid division by zero with much smaller value
       # Calculate ratio of weight to processing time (Smith's rule)
       ratio = weight / proc_time
 
@@ -48,11 +53,11 @@ def schedule(image_info, time_budget=None):
     return ordered_filenames
   
   else:
-    # Apply knapsack algorithm with time budget constraint
+    # Apply knapsack algorithm with time budget constraint using memmap to save memory
     n = len(image_info)
     
-    # Convert processing times to integers (multiply by 100 for 0.01s precision)
-    scale_factor = 100
+    # Convert processing times to integers (multiply by 1000 for 0.001s precision)
+    scale_factor = 1000  # Increased from 100 to 1000 for better precision
     scaled_budget = int(time_budget * scale_factor)
     
     # Create items with scaled processing times
@@ -61,51 +66,84 @@ def schedule(image_info, time_budget=None):
       scaled_time = max(int(proc_time * scale_factor), 1)  # Ensure minimum of 1
       scaled_items.append((i, filename, space_saved, proc_time, scaled_time))
     
-    # Create 2D DP table: dp[i][j] = maximum value (space saved) that can be achieved
-    # with first i items and time budget j
-    dp = [[0 for _ in range(scaled_budget + 1)] for _ in range(n + 1)]
+    # Calculate memory requirements
+    estimated_size_bytes = (n + 1) * (scaled_budget + 1) * 4  # 4 bytes per float32
+    estimated_size_mb = estimated_size_bytes / (1024 * 1024)
     
-    # Build the DP table
-    for i in range(1, n + 1):
-      for j in range(scaled_budget + 1):
-        # Current item's properties (0-indexed in items list)
+    # Adjust scale factor if the memory requirements are too high
+    if estimated_size_mb > 500:  # Limit to 500MB to be safe
+      original_scale = scale_factor
+      scale_factor = int((500 * 1024 * 1024) / ((n + 1) * (scaled_budget + 1) * 4) * scale_factor)
+      scale_factor = max(scale_factor, 1)  # Ensure at least 1
+      scaled_budget = int(time_budget * scale_factor)
+      print(f"Memory optimization: Reduced scale factor from {original_scale} to {scale_factor}")
+      print(f"New estimated memory usage: {(n + 1) * (scaled_budget + 1) * 4 / (1024 * 1024):.2f} MB")
+    
+    # Create temporary file for memory mapping
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_filename = temp_file.name
+    temp_file.close()
+    
+    try:
+      # Create memory-mapped array for DP table
+      dp = np.memmap(temp_filename, dtype=np.float32, mode='w+', shape=(n + 1, scaled_budget + 1))
+      
+      # Initialize the DP table with zeros
+      dp[:] = 0
+      dp.flush()
+      
+      # Build the DP table - process row by row to minimize memory usage
+      for i in range(1, n + 1):
         _, filename, space_saved, proc_time, scaled_time = scaled_items[i-1]
         
-        # If current item's time exceeds remaining budget, skip it
-        if scaled_time > j:
-          dp[i][j] = dp[i-1][j]
-        else:
-          # Choose maximum of: 
-          # 1. Not including current item
-          # 2. Including current item + best solution with remaining budget
-          dp[i][j] = max(dp[i-1][j], dp[i-1][j-scaled_time] + space_saved)
+        # Process the current row
+        for j in range(scaled_budget + 1):
+          if scaled_time > j:
+            dp[i, j] = dp[i-1, j]
+          else:
+            dp[i, j] = max(dp[i-1, j], dp[i-1, j-scaled_time] + space_saved)
+        
+        # Flush changes to disk after each row
+        dp.flush()
+      
+      # Trace back to find selected items
+      selected = []
+      j = scaled_budget
+      
+      for i in range(n, 0, -1):
+        if dp[i, j] != dp[i-1, j]:
+          # This item was selected
+          idx, filename, space_saved, proc_time, scaled_time = scaled_items[i-1]
+          selected.append((idx, filename, space_saved, proc_time))
+          j -= scaled_time
+      
+      # Sort selected items by their original index to maintain relative order
+      selected.sort()
+      
+      # Extract filenames of selected items
+      ordered_filenames = [item[1] for item in selected]
+      
+      # Calculate total space saved and processing time
+      total_space_saved = sum(item[2] for item in selected)
+      total_proc_time = sum(item[3] for item in selected)
+      
+      print(f"\nKnapsack Scheduling ({len(ordered_filenames)} of {n} image(s)):")
+      print(f"Time Budget: {time_budget:.2f}s, Used: {total_proc_time:.2f}s")
+      print(f"Total space saved: {total_space_saved:.2f}KB")
+      
+      for idx, (_, filename, space_saved, proc_time) in enumerate(selected):
+        print(f"{idx+1}. {filename} ({proc_time:.2f}s, Space saved: {space_saved:.2f}KB)")
+      
+      return ordered_filenames
     
-    # Trace back to find selected items
-    selected = []
-    j = scaled_budget
-    
-    for i in range(n, 0, -1):
-      if dp[i][j] != dp[i-1][j]:
-        # This item was selected
-        idx, filename, space_saved, proc_time, scaled_time = scaled_items[i-1]
-        selected.append((idx, filename, space_saved, proc_time))
-        j -= scaled_time
-    
-    # Sort selected items by their original index to maintain relative order
-    selected.sort()
-    
-    # Extract filenames of selected items
-    ordered_filenames = [item[1] for item in selected]
-    
-    # Calculate total space saved and processing time
-    total_space_saved = sum(item[2] for item in selected)
-    total_proc_time = sum(item[3] for item in selected)
-    
-    print(f"\nKnapsack Scheduling ({len(ordered_filenames)} of {n} image(s)):")
-    print(f"Time Budget: {time_budget:.2f}s, Used: {total_proc_time:.2f}s")
-    print(f"Total space saved: {total_space_saved:.2f}KB")
-    
-    for idx, (_, filename, space_saved, proc_time) in enumerate(selected):
-      print(f"{idx+1}. {filename} ({proc_time:.2f}s, Space saved: {space_saved:.2f}KB)")
-    
-    return ordered_filenames
+    finally:
+      # Clean up the memory map and temporary file
+      if 'dp' in locals():
+        del dp
+      
+      # Remove the temporary file
+      if os.path.exists(temp_filename):
+        try:
+          os.unlink(temp_filename)
+        except Exception as e:
+          print(f"Warning: Failed to delete temporary file {temp_filename}: {e}")
