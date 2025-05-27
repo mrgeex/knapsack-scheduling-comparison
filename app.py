@@ -12,7 +12,7 @@ import subprocess
 import platform
 
 # Configure these settings:
-INPUT_FOLDER = r"./test"
+INPUT_FOLDER = r"./pics/flickr30k_images"
 OUTPUT_FOLDER = r"./after"
 QUALITY = 50
 SAMPLE_PERCENTAGE = 10  # Percentage of image to process for estimation
@@ -44,7 +44,7 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
   
     elif scheduler_name == "greedy":
         if time_budget is not None:
-            print(f"Greedy Knapsack (Time Budget: {time_budget:.2f}s)")
+            print(f"Greedy Knapsack (Time Budget: {time_budget:.4f}s)")
             ordered_filenames = greedy.schedule(image_info, time_budget)
         else:
             print("Shortest Processing Time First")
@@ -60,10 +60,9 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
   
     elif scheduler_name == "dp":
         if time_budget is not None:
-            print(f"DP Knapsack (Time Budget: {time_budget:.2f}s)")
+            print(f"DP Knapsack (Time Budget: {time_budget:.4f}s)")
             ordered_filenames = dp.schedule(image_info, time_budget)
         else:
-            print("Highest Ratio First (Smith's Rule)")
             ordered_filenames = dp.schedule(image_info)
         
         # Calculate total space saved based on ordered filenames
@@ -95,8 +94,8 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
                     
         print("\nScheduling Completed (using pre-compressed files).")
         print(f"Files to compress: {len(processed_filenames)}")
-        print(f"Estimated Total Processing Time: {total_time:.2f} seconds")
-        print(f"Total Space Saved: {total_space_saved:.2f} KB")
+        print(f"Estimated Total Processing Time: {total_time:.4f} seconds")
+        print(f"Total Space Saved: {total_space_saved:.4f} KB")
         
         return total_time, processing_times
     else:
@@ -113,8 +112,8 @@ def process_with_scheduler(scheduler_name, image_info, input_folder, output_fold
 
         print("\nScheduling Completed.")
         print(f"Successful compression: {processed}")
-        print(f"Total Processing Time: {processing_time:.2f} seconds")
-        print(f"Total Space Saved: {total_space_saved:.2f} KB")
+        print(f"Total Processing Time: {processing_time:.4f} seconds")
+        print(f"Total Space Saved: {total_space_saved:.4f} KB")
 
         return processing_time, measured_times
 
@@ -230,18 +229,18 @@ def display_menu(is_initialized, image_count=0, total_original_size=0, total_com
     
     if is_initialized:
         print(f"Found images: {image_count}")
-        print(f"Total original size: {total_original_size:.2f} KB")
+        print(f"Total original size: {total_original_size:.4f} KB")
         
         if sample_percentage == 100:
-            print(f"Compressed size: {total_compressed_size:.2f} KB")
-            print(f"Space saved: {total_space_saved:.2f} KB")
-            print(f"Compression ratio: {(1 - total_compressed_size/total_original_size) * 100:.2f}%")
-            print(f"Total processing time: {total_time:.2f} seconds")
+            print(f"Compressed size: {total_compressed_size:.4f} KB")
+            print(f"Space saved: {total_space_saved:.4f} KB")
+            print(f"Compression ratio: {(1 - total_compressed_size/total_original_size) * 100:.4f}%")
+            print(f"Total processing time: {total_time:.4f} seconds")
         else:
-            print(f"Estimated compressed size: {total_compressed_size:.2f} KB")
-            print(f"Estimated space saved: {total_space_saved:.2f} KB")
-            print(f"Estimated compression ratio: {(1 - total_compressed_size/total_original_size) * 100:.2f}%")
-            print(f"Estimated total processing time: {total_time:.2f} seconds")
+            print(f"Estimated compressed size: {total_compressed_size:.4f} KB")
+            print(f"Estimated space saved: {total_space_saved:.4f} KB")
+            print(f"Estimated compression ratio: {(1 - total_compressed_size/total_original_size) * 100:.4f}%")
+            print(f"Estimated total processing time: {total_time:.4f} seconds")
             
         print(f"Sample percentage: {sample_percentage}%")
         print(f"Time budget: {time_budget if time_budget else 'None'}")

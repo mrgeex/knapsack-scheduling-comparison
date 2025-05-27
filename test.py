@@ -40,7 +40,7 @@ import dp
 
 # Set default directory paths here for easier configuration
 DEFAULT_INPUT_DIR = r"./pics/flickr30k_images"  # Directory containing source images
-DEFAULT_INPUT_DIR = r"./test"  # Directory containing source images
+# DEFAULT_INPUT_DIR = r"./test"  # Directory containing source images
 DEFAULT_OUTPUT_DIR = r"./results"  # Directory for results and charts
 DEFAULT_QUALITY = 50  # Compression quality (1-100, lower = more compression)
 DEFAULT_SAMPLE_PERCENTAGE = 100  # Percentage of image to process for estimation
@@ -308,7 +308,7 @@ class SchedulerTester:
                 logger.warning(f"  No valid images found in {dataset_dir}")
                 return
                 
-            logger.info(f"  Found {len(image_info)} images, total processing time: {total_time:.2f}s")
+            logger.info(f"  Found {len(image_info)} images, total processing time: {total_time:.4f}s")
             
             # Define time budgets for testing
             if self.quick_test:
@@ -356,7 +356,7 @@ class SchedulerTester:
         # Clear the output directory
         self._clear_directory(output_dir)
         
-        budget_label = f"{time_budget:.2f}s" if time_budget is not None else "No budget"
+        budget_label = f"{time_budget:.4f}s" if time_budget is not None else "No budget"
         logger.info(f"  Testing {algorithm.upper()} with {budget_label}")
         
         # Measure scheduling time (algorithm overhead)
@@ -422,10 +422,10 @@ class SchedulerTester:
             self.results.append(result)
             
             logger.info(f"    - Files processed: {len(ordered_filenames)}/{len(image_info)}")
-            logger.info(f"    - Space saved: {space_saved:.2f} KB")
-            logger.info(f"    - Processing time: {total_processing_time:.2f}s")
-            logger.info(f"    - Scheduling overhead: {scheduling_time:.2f}s")
-            logger.info(f"    - Efficiency: {efficiency:.2f} KB/s")
+            logger.info(f"    - Space saved: {space_saved:.4f} KB")
+            logger.info(f"    - Processing time: {total_processing_time:.4f}s")
+            logger.info(f"    - Scheduling overhead: {scheduling_time:.4f}s")
+            logger.info(f"    - Efficiency: {efficiency:.4f} KB/s")
             
         except Exception as e:
             logger.error(f"Error testing {algorithm} with {budget_label}: {e}", exc_info=True)
@@ -453,7 +453,7 @@ class SchedulerTester:
         # Convert time budget to more readable format for legend
         df_plot = df.copy()
         df_plot['budget_label'] = df_plot['time_budget'].apply(
-            lambda x: 'No Budget' if pd.isna(x) else f'{x:.2f}s')
+            lambda x: 'No Budget' if pd.isna(x) else f'{x:.4f}s')
         
         # Get the list of unique algorithms and budget labels
         algorithms = df_plot[x].unique()
@@ -718,7 +718,7 @@ class SchedulerTester:
         # Convert time budget to readable format
         df_plot = df.copy()
         df_plot['budget_label'] = df_plot['time_budget'].apply(
-            lambda x: 'No Budget' if pd.isna(x) else f'{x:.2f}s')
+            lambda x: 'No Budget' if pd.isna(x) else f'{x:.4f}s')
         
         # Sort values for better readability
         budget_order = sorted(
@@ -903,7 +903,7 @@ class SchedulerTester:
         # Convert time budget to readable format
         df_plot = df.copy()
         df_plot['budget_label'] = df_plot['time_budget'].apply(
-            lambda x: 'No Budget' if pd.isna(x) else f'{x:.2f}s')
+            lambda x: 'No Budget' if pd.isna(x) else f'{x:.4f}s')
         
         # Prepare data: pivot to get algorithm x budget with dataset as values
         pivot_data = pd.pivot_table(
@@ -1006,7 +1006,7 @@ class SchedulerTester:
         # Convert time budget to readable format
         df_plot = df.copy()
         df_plot['budget_label'] = df_plot['time_budget'].apply(
-            lambda x: 'No Budget' if pd.isna(x) else f'{x:.2f}s')
+            lambda x: 'No Budget' if pd.isna(x) else f'{x:.4f}s')
         
         # Get unique datasets
         datasets = df_plot['dataset'].unique()
@@ -1157,8 +1157,8 @@ class SchedulerTester:
         print("-" * 80)
         
         for _, row in summary.iterrows():
-            print(f"{row['algorithm'].upper():<10} {row['space_saved']:<20.2f} {row['processing_time']:<20.2f} "
-                  f"{row['efficiency']:<20.2f} {row['scheduling_time']:<20.2f} {row['completion_rate']:<15.2%}")
+            print(f"{row['algorithm'].upper():<10} {row['space_saved']:<20.4f} {row['processing_time']:<20.4f} "
+                  f"{row['efficiency']:<20.4f} {row['scheduling_time']:<20.4f} {row['completion_rate']:<15.2%}")
         print("=" * 80)
 
 
@@ -1214,10 +1214,10 @@ def main() -> None:
         # Print summary
         tester.print_summary()
         
-        logger.info(f"Testing completed in {end_time - start_time:.2f} seconds")
+        logger.info(f"Testing completed in {end_time - start_time:.4f} seconds")
         logger.info(f"Check {args.output_dir} for results and charts")
         
-        print(f"\nTesting completed in {end_time - start_time:.2f} seconds")
+        print(f"\nTesting completed in {end_time - start_time:.4f} seconds")
         print(f"Check {args.output_dir} for results and charts")
         
     except Exception as e:

@@ -31,7 +31,7 @@ def schedule(image_info, time_budget=None):
 
     print(f"\nScheduling order ({len(image_info)} image(s)):")
     for i, (filename, _, _, space_saved, proc_time) in enumerate(sorted_images):
-      print(f"{i+1}. {filename} (Processing Time: {proc_time:.2f}s, Space saved: {space_saved:.2f}KB)")
+      print(f"{i+1}. {filename} (Processing Time: {proc_time:.4f}s, Space saved: {space_saved:.4f}KB)")
 
     return ordered_filenames
   
@@ -67,10 +67,10 @@ def schedule(image_info, time_budget=None):
     ordered_filenames = [item[1] for item in selected]
     
     print(f"\nGreedy Knapsack Scheduling ({len(ordered_filenames)} of {len(image_info)} image(s)):")
-    print(f"Time Budget: {time_budget:.2f}s, Used: {total_time:.2f}s")
-    print(f"Total space saved: {total_space_saved:.2f}KB")
+    print(f"Time Budget: {time_budget:.4f}s, Used: {total_time:.4f}s")
+    print(f"Total space saved: {total_space_saved:.4f}KB")
     
     for idx, (_, filename, space_saved, proc_time, ratio) in enumerate(selected):
-      print(f"{idx+1}. {filename} (Value/Time Ratio: {ratio:.2f}, Space saved: {space_saved:.2f}KB)")
+      print(f"{idx+1}. {filename} (Value/Time Ratio: {ratio:.4f}, Space saved: {space_saved:.4f}KB)")
     
     return ordered_filenames

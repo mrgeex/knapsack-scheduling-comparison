@@ -160,9 +160,9 @@ def compress_images(input_folder:str, output_folder:str, quality=50, files_to_pr
                 print(f">>> Compressed: {filename}")
             elif processing_times:
                 # During scheduling runs, show more detailed output
-                time_info = f" (expected time: {processing_times[filename]:.2f}s)"
+                time_info = f" (expected time: {processing_times[filename]:.4f}s)"
                 print(f"Processing: {filename}{time_info}")
-                print(f">>> Compressed: {filename} (took {process_time:.2f}s)")
+                print(f">>> Compressed: {filename} (took {process_time:.4f}s)")
         else:
             skipped_count += 1
 
@@ -235,7 +235,7 @@ def estimate_image_info(input_folder:str, quality:int=50, sample_percentage:int=
                 image_info.append((file_name, original_size, estimated_compressed_size, estimated_space_saved, estimated_time))
                 
                 processed += 1
-                print(f"Estimated: {file_name} ({processed}/{total_files}) - Est. time: {estimated_time:.2f}s, Est. ratio: {compression_ratio:.2f}")
+                print(f"Estimated: {file_name} ({processed}/{total_files}) - Est. time: {estimated_time:.4f}s, Est. ratio: {compression_ratio:.4f}")
             else:
                 # Skip files that couldn't be estimated
                 print(f"Skipped: {file_name} (estimation failed)")
@@ -269,4 +269,4 @@ if __name__ == "__main__":
     print(f"Compression Completed!")
     print(f"Successful compression >>> {processed}")
     print(f"Skipped files >>> {skipped}")
-    print(f"Overall Time >>> {total_time:.2f} seconds")
+    print(f"Overall Time >>> {total_time:.4f} seconds")
